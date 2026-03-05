@@ -3,141 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner 3D Profissional</title>
+    <title>Scanner 3D Pro - KIRI Engine</title>
     <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Space Grotesk', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
-        .glow-box { box-shadow: 0 0 40px rgba(99, 102, 241, 0.15); }
-        .progress-bar-fill { background: linear-gradient(90deg, #6366f1, #a855f7); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        .glow-box { box-shadow: 0 0 40px rgba(99, 102, 241, 0.2); }
+        .progress-fill { background: linear-gradient(90deg, #6366f1, #a855f7); background-size: 200% 100%; animation: shimmer 2s infinite linear; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
-<body class="h-full gradient-bg text-slate-200 overflow-auto">
-    <div class="max-w-2xl mx-auto px-4 py-12">
+<body class="h-full gradient-bg text-slate-200">
+    <div class="max-w-2xl mx-auto px-4 py-10">
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">📸 Video to 3D STL</h1>
-            <p class="text-slate-400">Converta vídeos 360° em modelos para impressão 3D</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">📸 Video to 3D STL</h1>
+            <p class="text-slate-400">Transforme seus vídeos em arquivos para Impressão 3D</p>
         </div>
 
-        <div class="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 glow-box border border-slate-700">
-            <div id="drop-area" class="border-2 border-dashed border-slate-600 rounded-2xl p-10 text-center cursor-pointer hover:border-indigo-500 transition-all">
-                <input type="file" id="video-input" accept="video/*" class="hidden">
-                <div id="upload-label">
-                    <svg class="w-12 h-12 text-indigo-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115 9h1a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                    <p class="text-white font-medium">Arraste ou clique para subir o vídeo</p>
+        <div class="bg-slate-800/40 backdrop-blur-md rounded-3xl p-6 md:p-8 glow-box border border-slate-700">
+            <div id="drop-zone" class="border-2 border-dashed border-slate-600 rounded-2xl p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-700/30 transition-all">
+                <input type="file" id="file-input" accept="video/*" class="hidden">
+                <div id="prompt-view">
+                    <svg class="w-12 h-12 text-indigo-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115 9h1a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                    <p class="text-white font-medium">Clique para selecionar o vídeo 360°</p>
+                    <p class="text-slate-500 text-sm mt-1">MP4 ou MOV até 100MB</p>
                 </div>
-                <div id="video-preview-container" class="hidden">
-                    <video id="video-element" class="w-full rounded-lg mb-2" controls></video>
-                    <p id="file-info" class="text-indigo-400 text-sm"></p>
+                <div id="preview-view" class="hidden">
+                    <video id="video-player" class="w-full rounded-lg mb-2 shadow-lg" controls></video>
+                    <p id="video-name" class="text-indigo-300 text-sm font-bold"></p>
                 </div>
             </div>
 
-            <button id="start-btn" class="w-full mt-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl disabled:opacity-50 transition-all" disabled>
-                Gerar Modelo 3D (STL)
+            <button id="action-btn" class="w-full mt-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all" disabled>
+                Iniciar Processamento 3D
             </button>
 
-            <div id="status-container" class="hidden mt-8">
-                <p id="status-text" class="text-center text-white font-medium mb-2">Iniciando...</p>
+            <div id="status-box" class="hidden mt-8">
+                <div class="flex justify-between mb-2">
+                    <span id="status-label" class="text-sm font-medium text-indigo-300">Aguardando...</span>
+                    <span id="percent-label" class="text-sm text-slate-500">0%</span>
+                </div>
                 <div class="h-3 bg-slate-700 rounded-full overflow-hidden">
-                    <div id="progress-inner" class="progress-bar-fill h-full w-0 transition-all duration-500"></div>
+                    <div id="bar-inner" class="progress-fill h-full w-0 transition-all duration-500"></div>
                 </div>
             </div>
 
-            <div id="result-container" class="hidden mt-8 text-center bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-2xl">
-                <h3 class="text-emerald-400 font-bold mb-4">✅ Processamento Concluído!</h3>
-                <a id="download-link" href="#" class="inline-block w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
-                    📥 Baixar Arquivo STL
+            <div id="done-box" class="hidden mt-8 text-center bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-2xl">
+                <h3 class="text-emerald-400 font-bold text-xl mb-4">🚀 Modelo 3D Pronto!</h3>
+                <a id="download-url" href="#" target="_blank" class="block w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-transform hover:scale-105">
+                    📥 Baixar Arquivo .STL
                 </a>
+                <button onclick="location.reload()" class="mt-4 text-slate-500 hover:text-white text-sm">Escanear outro objeto</button>
             </div>
         </div>
+        
+        <p class="text-center text-slate-600 text-xs mt-6">⚡ Conectado à KIRI Engine API v1</p>
     </div>
 
     <script>
-        // CONFIGURAÇÃO DA SUA API
-        const KIRI_API_KEY = "kiri_OTiI_Lhf_AS9SuCkQBlXkmNIKnL1cRukOAuhGJ2g560";
-        const BASE_URL = "https://api.kiriengine.app/v1";
+        // CONFIGURAÇÕES
+        const API_KEY = "kiri_q5yKAQD1yMjm9WkuO8iBqGhS46DKFbfp9E6CFpcBWMY";
+        const ENDPOINT = "https://api.kiriengine.app/v1";
 
-        let selectedVideo = null;
+        let videoFile = null;
 
-        const videoInput = document.getElementById('video-input');
-        const dropArea = document.getElementById('drop-area');
-        const startBtn = document.getElementById('start-btn');
-        const statusContainer = document.getElementById('status-container');
-        const progressInner = document.getElementById('progress-inner');
-        const statusText = document.getElementById('status-text');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const actionBtn = document.getElementById('action-btn');
+        const statusBox = document.getElementById('status-box');
+        const barInner = document.getElementById('bar-inner');
+        const statusLabel = document.getElementById('status-label');
+        const percentLabel = document.getElementById('percent-label');
 
-        dropArea.onclick = () => videoInput.click();
+        dropZone.onclick = () => fileInput.click();
 
-        videoInput.onchange = (e) => {
+        fileInput.onchange = (e) => {
             if (e.target.files.length > 0) {
-                selectedVideo = e.target.files[0];
-                document.getElementById('upload-label').classList.add('hidden');
-                document.getElementById('video-preview-container').classList.remove('hidden');
-                document.getElementById('video-element').src = URL.createObjectURL(selectedVideo);
-                document.getElementById('file-info').textContent = selectedVideo.name;
-                startBtn.disabled = false;
+                videoFile = e.target.files[0];
+                document.getElementById('prompt-view').classList.add('hidden');
+                document.getElementById('preview-view').classList.remove('hidden');
+                document.getElementById('video-player').src = URL.createObjectURL(videoFile);
+                document.getElementById('video-name').textContent = videoFile.name;
+                actionBtn.disabled = false;
             }
         };
 
-        startBtn.onclick = async () => {
-            startBtn.disabled = true;
-            statusContainer.classList.remove('hidden');
+        actionBtn.onclick = async () => {
+            actionBtn.disabled = true;
+            statusBox.classList.remove('hidden');
             
             try {
                 // 1. UPLOAD
-                updateUI(20, "Enviando vídeo para a KIRI Engine...");
+                updateProgress(15, "Enviando vídeo para nuvem...");
                 const formData = new FormData();
-                formData.append('file', selectedVideo);
+                formData.append('file', videoFile);
 
-                const uploadRes = await fetch(`${BASE_URL}/upload`, {
+                const response = await fetch(`${ENDPOINT}/upload`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${KIRI_API_KEY}` },
+                    headers: { 'Authorization': `Bearer ${API_KEY}` },
                     body: formData
                 });
-                
-                const uploadData = await uploadRes.json();
-                const projectId = uploadData.id;
 
-                // 2. MONITORAMENTO (POLLING)
-                updateUI(40, "Vídeo recebido. Processando 3D...");
+                if (!response.ok) throw new Error("Falha no upload. Verifique o tamanho do arquivo.");
                 
-                const checkInterval = setInterval(async () => {
-                    const statusRes = await fetch(`${BASE_URL}/project/${projectId}`, {
-                        headers: { 'Authorization': `Bearer ${KIRI_API_KEY}` }
-                    });
-                    const project = await statusRes.json();
+                const data = await response.json();
+                const jobId = data.id;
 
-                    if (project.status === "COMPLETED") {
-                        clearInterval(checkInterval);
-                        updateUI(100, "Sucesso!");
-                        showFinalResult(project.export_urls.stl);
-                    } else if (project.status === "FAILED") {
-                        clearInterval(checkInterval);
-                        alert("Erro no processamento da IA.");
-                    } else {
-                        // Incremento visual enquanto espera
-                        let currentProgress = parseInt(progressInner.style.width);
-                        if(currentProgress < 95) updateUI(currentProgress + 1, "A IA está criando os detalhes...");
+                // 2. POLLING (VERIFICAÇÃO)
+                updateProgress(40, "Vídeo recebido! A IA está trabalhando...");
+                
+                const timer = setInterval(async () => {
+                    try {
+                        const check = await fetch(`${ENDPOINT}/project/${jobId}`, {
+                            headers: { 'Authorization': `Bearer ${API_KEY}` }
+                        });
+                        const result = await check.json();
+
+                        if (result.status === "COMPLETED") {
+                            clearInterval(timer);
+                            updateProgress(100, "Concluído!");
+                            showDownload(result.export_urls.stl || result.export_urls.obj);
+                        } else if (result.status === "FAILED") {
+                            clearInterval(timer);
+                            throw new Error("A IA não conseguiu processar este vídeo.");
+                        } else {
+                            // Progresso visual simulado enquanto a IA processa
+                            let current = parseInt(barInner.style.width);
+                            if (current < 95) updateProgress(current + 1, "Refinando malha 3D...");
+                        }
+                    } catch (err) {
+                        clearInterval(timer);
+                        alert(err.message);
                     }
-                }, 10000); // Checa a cada 10 segundos
+                }, 8000); // Checa a cada 8 segundos
 
             } catch (error) {
-                console.error(error);
-                alert("Erro de conexão. Verifique sua chave API.");
+                alert("Erro: " + error.message);
+                actionBtn.disabled = false;
             }
         };
 
-        function updateUI(percent, msg) {
-            progressInner.style.width = percent + '%';
-            statusText.textContent = msg;
+        function updateProgress(num, txt) {
+            barInner.style.width = num + '%';
+            percentLabel.textContent = num + '%';
+            statusLabel.textContent = txt;
         }
 
-        function showFinalResult(url) {
-            statusContainer.classList.add('hidden');
-            document.getElementById('result-container').classList.remove('hidden');
-            document.getElementById('download-link').href = url;
+        function showDownload(url) {
+            statusBox.classList.add('hidden');
+            document.getElementById('done-box').classList.remove('hidden');
+            document.getElementById('download-url').href = url;
         }
     </script>
 </body>
